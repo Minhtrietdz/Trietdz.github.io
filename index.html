@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OMNI-EYE | Global Threat Intelligence Platform</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;600&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* ==========================================================================
+           1. CSS VARIABLES & CORE RESET
+           ========================================================================== */
+        :root {
+            --bg-deep: #030406;
+            --bg-panel: rgba(10, 14, 23, 0.7);
+            --bg-glass: rgba(255, 255, 255, 0.02);
+            
+            --neon-cyan: #00f3ff;
+            --neon-red: #ff003c;
+            --neon-green: #00ff66;
+            --neon-purple: #bc13fe;
+            --neon-yellow: #ffea00;
+            
+            --text-main: #a0aec0;
+            --text-bright: #e2e8f0;
+            
+            --font-head: 'Orbitron', sans-serif;
+            --font-sub: 'Rajdhani', sans-serif;
+            --font-code: 'Fira Code', monospace;
+            
+            --transition-fast: 0.2s ease;
+            --transition-slow: 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; font-size: 16px; }
+
+        body {
+            background-color: var(--bg-deep); color: var(--text-main);
+            font-family: var(--font-sub); line-height: 1.6; overflow-x: hidden;
+        }
+
+        /* Tùy chỉnh thanh cuộn Cyberpunk */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-deep); }
+        ::-webkit-scrollbar-thumb { background: var(--neon-cyan); border-radius: 0; }
+
+        /* CANVAS BACKGROUND */
+        #particle-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; opacity: 0.6; }
+
+        /* ==========================================================================
+           2. PRELOADER (Màn hình khởi động)
+           ========================================================================== */
+        #preloader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; font-family: var(--font-code); color: var(--neon-green);
+        }
+        #preloader.fade-out { opacity: 0; visibility: hidden; transition: 1s ease; }
+        .terminal-loader { width: 80%; max-width: 600px; text-align: left; }
+        .progress-bar { width: 100%; height: 2px; background: #333; margin-top: 20px; position: relative; }
+        .progress-fill { position: absolute; top: 0; left: 0; height: 100%; background: var(--neon-green); width: 0%; box-shadow: 0 0 10px var(--neon-green); transition: width 0.1s; }
+
+        /* ==========================================================================
+           3. NAVBAR & LAYOUT
+           ========================================================================== */
+        .sys-header {
+            position: fixed; top: 0; width: 100%; z-index: 1000;
+            background: rgba(3, 4, 6, 0.8); backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 243, 255, 0.2); padding: 15px 40px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        
+        .brand { font-family: var(--font-head); font-size: 1.8rem; color: #fff; text-decoration: none; letter-spacing: 2px; text-shadow: 0 0 10px var(--neon-cyan); }
+        .brand span { color: var(--neon-red); }
+
+        .nav-links { list-style: none; display: flex; gap: 30px; }
+        .nav-links li a {
+            color: var(--text-bright); text-decoration: none; font-family: var(--font-code); font-size: 0.9rem;
+            text-transform: uppercase; transition: var(--transition-fast); position: relative; display: flex; align-items: center; gap: 8px;
+        }
+        .nav-links li a i { font-size: 1.1rem; color: var(--neon-cyan); }
+        .nav-links li a:hover { color: var(--neon-cyan); }
+
+        .main-wrapper { padding-top: 80px; }
+
+        /* ==========================================================================
+           4. HERO SECTION & GLITCH
+           ========================================================================== */
+        .hero { min-height: 90vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; position: relative; }
+        
+        /* Hiệu ứng Glitch Text */
+        .glitch { font-family: var(--font-head); font-size: 5rem; font-weight: 900; color: #fff; position: relative; text-transform: uppercase; letter-spacing: 5px; }
+        .glitch::before, .glitch::after { content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-deep); }
+        .glitch::before { left: 2px; text-shadow: -2px 0 var(--neon-red); clip: rect(24px, 550px, 90px, 0); animation: glitch-anim-2 3s infinite linear alternate-reverse; }
+        .glitch::after { left: -2px; text-shadow: -2px 0 var(--neon-cyan); clip: rect(85px, 550px, 140px, 0); animation: glitch-anim 2.5s infinite linear alternate-reverse; }
+        
+        @keyframes glitch-anim { 0% { clip: rect(10px, 9999px, 44px, 0); } 20% { clip: rect(85px, 9999px, 14px, 0); } 40% { clip: rect(22px, 9999px, 98px, 0); } 60% { clip: rect(54px, 9999px, 23px, 0); } 80% { clip: rect(12px, 9999px, 76px, 0); } 100% { clip: rect(90px, 9999px, 34px, 0); } }
+        @keyframes glitch-anim-2 { 0% { clip: rect(65px, 9999px, 100px, 0); } 20% { clip: rect(3px, 9999px, 50px, 0); } 40% { clip: rect(89px, 9999px, 12px, 0); } 60% { clip: rect(22px, 9999px, 67px, 0); } 80% { clip: rect(55px, 9999px, 90px, 0); } 100% { clip: rect(11px, 9999px, 44px, 0); } }
+
+        .hero-desc { font-size: 1.5rem; color: var(--text-main); margin-top: 20px; max-width: 800px; font-family: var(--font-code); }
+        
+        /* Cyber Button */
+        .btn-cyber {
+            margin-top: 40px; padding: 15px 40px; font-family: var(--font-head); font-size: 1.2rem;
+            color: #000; background: var(--neon-cyan); border: none; cursor: pointer; text-decoration: none;
+            position: relative; text-transform: uppercase; letter-spacing: 2px;
+            clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); transition: var(--transition-fast);
+        }
+        .btn-cyber:hover { background: #fff; box-shadow: 0 0 20px var(--neon-cyan); }
+
+        /* ==========================================================================
+           5. SECTION TITLES & CONTAINERS
+           ========================================================================== */
+        .container { max-width: 1400px; margin: 0 auto; padding: 100px 20px; }
+        .sec-title { font-family: var(--font-head); font-size: 3rem; color: #fff; margin-bottom: 50px; display: flex; align-items: center; gap: 20px; }
+        .sec-title::before { content: ''; display: block; width: 60px; height: 4px; background: var(--neon-cyan); }
+        .sec-title span { color: var(--neon-red); }
+
+        /* ==========================================================================
+           6. 3D FLIP CARDS (MÃ ĐỘC DATABASE)
+           ========================================================================== */
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 40px; perspective: 1000px; }
+        
+        .flip-card { width: 100%; height: 400px; background-color: transparent; perspective: 1000px; cursor: pointer; }
+        .flip-inner { position: relative; width: 100%; height: 100%; text-align: center; transition: transform 0.8s; transform-style: preserve-3d; }
+        .flip-card:hover .flip-inner { transform: rotateY(180deg); }
+        
+        .flip-front, .flip-back {
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 30px;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        
+        .flip-front { background: var(--bg-panel); backdrop-filter: blur(5px); }
+        .flip-front i { font-size: 4rem; color: var(--neon-red); margin-bottom: 20px; text-shadow: 0 0 15px var(--neon-red); }
+        .flip-front h3 { font-family: var(--font-head); font-size: 2rem; color: #fff; margin-bottom: 10px; }
+        .flip-front .badge { display: inline-block; padding: 5px 15px; background: rgba(255,0,60,0.2); color: var(--neon-red); font-family: var(--font-code); border: 1px solid var(--neon-red); }
+
+        .flip-back { background: rgba(255, 0, 60, 0.05); color: white; transform: rotateY(180deg); text-align: left; border-color: var(--neon-red); }
+        .flip-back p { font-size: 1.1rem; margin-bottom: 15px; }
+        .flip-back ul { margin-left: 20px; font-family: var(--font-code); font-size: 0.9rem; color: #aaa; }
+
+        /* ==========================================================================
+           7. THREAT ACTORS & FBI TIMELINE (HIỆU ỨNG TRƯỢT DỌC)
+           ========================================================================== */
+        .intel-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 50px; }
+        
+        /* Băng đảng Hacker */
+        .actor-list { display: flex; flex-direction: column; gap: 20px; }
+        .actor-box {
+            background: var(--bg-glass); border-left: 4px solid var(--neon-purple);
+            padding: 25px; transition: var(--transition-slow);
+        }
+        .actor-box:hover { background: rgba(188, 19, 254, 0.1); transform: translateX(10px); }
+        .actor-box h4 { font-family: var(--font-head); font-size: 1.5rem; color: #fff; margin-bottom: 10px; }
+        .actor-box span { font-family: var(--font-code); color: var(--neon-purple); font-size: 0.9rem; }
+
+        /* FBI Timeline */
+        .timeline { border-left: 2px solid rgba(0, 243, 255, 0.3); padding-left: 30px; position: relative; }
+        .time-node { margin-bottom: 50px; position: relative; }
+        .time-node::before {
+            content: ''; position: absolute; left: -37px; top: 0; width: 12px; height: 12px;
+            background: var(--bg-deep); border: 2px solid var(--neon-cyan); border-radius: 50%;
+            box-shadow: 0 0 10px var(--neon-cyan);
+        }
+        .time-date { font-family: var(--font-code); color: var(--neon-cyan); font-weight: bold; font-size: 1.2rem; margin-bottom: 5px; }
+        .time-content { background: var(--bg-panel); padding: 25px; border: 1px solid rgba(0, 243, 255, 0.1); }
+        .time-content h4 { color: #fff; font-size: 1.4rem; font-family: var(--font-head); margin-bottom: 10px; }
+
+        /* ==========================================================================
+           8. VIETNAM CYBER SPACE (BỐ CỤC CHẺ ĐÔI ĐẶC BIỆT)
+           ========================================================================== */
+        .vn-section { background: rgba(0, 255, 102, 0.02); border-top: 1px solid rgba(0,255,102,0.2); border-bottom: 1px solid rgba(0,255,102,0.2); padding: 100px 0; }
+        .split-layout { display: flex; flex-wrap: wrap; gap: 0; align-items: center; }
+        .split-text { flex: 1; min-width: 400px; padding: 40px 5%; border-right: 1px solid rgba(255,255,255,0.05); }
+        .split-visual { flex: 1; min-width: 400px; padding: 40px 5%; display: flex; flex-direction: column; gap: 20px;}
+        
+        .stat-card { background: var(--bg-deep); padding: 30px; border: 1px solid var(--neon-green); box-shadow: 0 0 15px rgba(0,255,102,0.1); }
+        .stat-card i { font-size: 2.5rem; color: var(--neon-green); margin-bottom: 15px; }
+        .stat-number { font-family: var(--font-head); font-size: 3rem; color: #fff; line-height: 1; }
+
+        /* ==========================================================================
+           9. INTERACTIVE TERMINAL (JAVASCRIPT ĐỘNG)
+           ========================================================================== */
+        .terminal-container { max-width: 900px; margin: 100px auto; background: #0c0c0c; border: 1px solid #333; border-radius: 8px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .term-header { background: #1a1a1a; padding: 10px 20px; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid #333; }
+        .circle { width: 12px; height: 12px; border-radius: 50%; }
+        .c-red { background: #ff5f56; } .c-yel { background: #ffbd2e; } .c-grn { background: #27c93f; }
+        
+        .term-body { padding: 20px; font-family: var(--font-code); color: #0f0; height: 350px; overflow-y: auto; font-size: 1rem; }
+        .term-output { margin-bottom: 15px; white-space: pre-wrap; }
+        .term-input-line { display: flex; gap: 10px; }
+        .term-input-line span { color: var(--neon-cyan); }
+        .term-input-line input {
+            background: transparent; border: none; color: #0f0; font-family: var(--font-code);
+            font-size: 1rem; width: 100%; outline: none;
+        }
+
+        /* ==========================================================================
+           10. FOOTER & UTILITIES
+           ========================================================================== */
+        .ext-link { color: var(--neon-cyan); text-decoration: none; border-bottom: 1px dashed; padding-bottom: 2px; }
+        .ext-link:hover { background: var(--neon-cyan); color: #000; }
+        
+        .reveal { opacity: 0; transform: translateY(50px); transition: all 0.8s ease-out; }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+
+        footer { background: #000; padding: 80px 5%; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 40px; border-top: 1px solid #222; }
+        footer h4 { font-family: var(--font-head); color: #fff; margin-bottom: 20px; }
+        footer ul { list-style: none; }
+        footer ul li { margin-bottom: 10px; }
+        footer a { color: var(--text-main); text-decoration: none; font-family: var(--font-code); transition: 0.3s; }
+        footer a:hover { color: var(--neon-cyan); padding-left: 10px; }
+    </style>
+</head>
+<body>
+
+    <canvas id="particle-canvas"></canvas>
+
+    <div id="preloader">
+        <div class="terminal-loader">
+            <p id="load-text">Connecting to secure server...</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <header class="sys-header">
+        <a href="#" class="brand"><i class="fa-solid fa-shield-halved"></i> Root@<span>Triet IS</span></a>
+        <ul class="nav-links">
+            <li><a href="#malware"><i class="fa-solid fa-bug"></i> Database</a></li>
+            <li><a href="#actors"><i class="fa-solid fa-user-secret"></i> Tội Phạm</a></li>
+            <li><a href="#intel"><i class="fa-solid fa-crosshairs"></i> FBI Intel</a></li>
+            <li><a href="#vietnam"><i class="fa-solid fa-star"></i> Việt Nam</a></li>
+            <li><a href="#terminal"><i class="fa-solid fa-terminal"></i> Console</a></li>
+        </ul>
+    </header>
+
+    <div class="main-wrapper">
+        
+        <section class="hero">
+            <h1 class="glitch" data-text="Information Security">Information <span>Security</span></h1>
+            <p class="hero-desc">Hệ thống phân tích Tình báo Đe dọa Toàn cầu. Truy xuất dữ liệu giải phẫu Web, Malware, các băng đảng Hacker khét tiếng và chiến dịch triệt phá của Cảnh sát Quốc tế.</p>
+            <a href="#malware" class="btn-cyber">Khởi Chạy Hệ Thống</a>
+        </section>
+
+        <section class="container" id="malware">
+            <h2 class="sec-title"><span>01.</span> Malware Anatomy & Web Exploits</h2>
+            <p class="reveal" style="font-size: 1.2rem; margin-bottom: 40px; max-width: 900px;">
+                Mọi cuộc tấn công đều bắt nguồn từ lỗ hổng kiến trúc Web (OSI Model/TCP-IP). Các <a href="https://owasp.org/www-community/attacks/SQL_Injection" target="_blank" class="ext-link">SQL Injection (SQLi)</a> bơm lệnh độc vào cơ sở dữ liệu, trong khi <a href="https://portswigger.net/web-security/cross-site-scripting" target="_blank" class="ext-link">XSS</a> chèn mã kịch bản lừa trình duyệt nạn nhân. Dưới đây là hồ sơ các vũ khí kỹ thuật số tàn phá nhất lịch sử.
+            </p>
+            
+            <div class="grid-3" id="malware-grid">
+                </div>
+        </section>
+
+        <section class="container" id="actors">
+            <h2 class="sec-title" style="color: var(--neon-purple);"><span>02.</span> Threat Actors vs. Law Enforcement</h2>
+            
+            <div class="intel-grid">
+                <div class="reveal">
+                    <h3 style="font-family: var(--font-head); color: #fff; margin-bottom: 30px; font-size: 1.8rem;"><i class="fa-solid fa-skull"></i> Thế Giới Ngầm (Dark Web)</h3>
+                    <div class="actor-list">
+                        <div class="actor-box">
+                            <h4>Anonymous (Hacktivist)</h4>
+                            <span>Trạng thái: Phi Tập Trung</span>
+                            <p>Nhóm Hacker ẩn danh hoạt động vì chính trị và xã hội. Nổi tiếng với các đợt tấn công DDoS diện rộng (Chiến dịch Payback) nhắm vào PayPal, Visa, và Nhà thờ Scientology.</p>
+                        </div>
+                        <div class="actor-box">
+                            <h4>Lazarus Group (APT38)</h4>
+                            <span>Trạng thái: Đặc vụ Nhà nước</span>
+                            <p>Băng đảng nguy hiểm bậc nhất. Đứng sau vụ tấn công chấn động Hãng phim Sony Pictures (2014) và vụ đánh cắp 81 triệu USD từ Ngân hàng Trung ương Bangladesh qua hệ thống mạng SWIFT.</p>
+                        </div>
+                        <div class="actor-box">
+                            <h4>LockBit (RaaS)</h4>
+                            <span>Trạng thái: Đã bị triệt phá một phần</span>
+                            <p>Tiên phong mô hình Ransomware-as-a-Service (RaaS). Bán nền tảng mã hóa cho các "đại lý" để tống tiền doanh nghiệp, y tế. Sở hữu bộ đếm ngược đòi tiền chuộc nổi tiếng trên Darknet.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="reveal" id="intel">
+                    <h3 style="font-family: var(--font-head); color: var(--neon-cyan); margin-bottom: 30px; font-size: 1.8rem;"><i class="fa-solid fa-building-shield"></i> Chiến Dịch Triệt Phá (FBI/CIA)</h3>
+                    <div class="timeline">
+                        <div class="time-node">
+                            <div class="time-date">2013 - Silk Road Takedown</div>
+                            <div class="time-content">
+                                <h4>Sự Sụp Đổ Của Chợ Đen Lớn Nhất</h4>
+                                <p>FBI thu giữ máy chủ của <a href="https://www.fbi.gov/history/famous-cases/silk-road" target="_blank" class="ext-link">Silk Road</a> trên mạng Tor. Lần theo IP thông qua lỗi rò rỉ CAPTCHA, đặc vụ FBI đã bắt quả tang Ross Ulbricht (Dread Pirate Roberts) khi hắn đang mở laptop trong thư viện.</p>
+                            </div>
+                        </div>
+                        <div class="time-node">
+                            <div class="time-date">2017 - Chiến dịch AlphaBay</div>
+                            <div class="time-content">
+                                <h4>Sai Lầm Chết Người</h4>
+                                <p>Liên minh Mỹ-Châu Âu đánh sập AlphaBay. Kẻ cầm đầu Alexandre Cazes bị bắt tại Thái Lan vì một lỗi bảo mật sơ đẳng: Sử dụng email cá nhân "Pimp_Alex_91@hotmail.com" trong tiêu đề email khôi phục mật khẩu của diễn đàn tội phạm.</p>
+                            </div>
+                        </div>
+                        <div class="time-node">
+                            <div class="time-date">Tháng 2/2024 - Operation Cronos</div>
+                            <div class="time-content">
+                                <h4>Hack Lại Hacker (LockBit)</h4>
+                                <p>Cảnh sát Anh (NCA) và FBI đã <a href="https://www.justice.gov/opa/pr/us-and-uk-disrupt-lockbit-ransomware-variant" target="_blank" class="ext-link">hack ngược lại hạ tầng</a> của LockBit. Tịch thu máy chủ, lấy được 1000 chìa khóa giải mã trả cho nạn nhân, và biến chính trang web tống tiền của LockBit thành nơi đăng thông cáo báo chí của Cảnh sát.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="vn-section" id="vietnam">
+            <div class="container split-layout">
+                <div class="split-text reveal">
+                    <h2 class="sec-title" style="color: var(--neon-green);"><span>03.</span> Không Gian Mạng Việt Nam</h2>
+                    <p style="font-size: 1.2rem; margin-bottom: 20px;">Việt Nam là một điểm nóng về an ninh mạng toàn cầu. Tại đây, sự đối đầu giữa các tổ chức Hacker Mũ Đen (chuyên lừa đảo Phishing, mã độc tống tiền nhắm vào doanh nghiệp như vụ <strong style="color: #fff;">VNDIRECT, PVOIL</strong>) và các chuyên gia Mũ Trắng (tại NCSC, Viettel, VNPT) diễn ra cực kỳ khốc liệt.</p>
+                    
+                    <h3 style="font-family: var(--font-head); color: #fff; font-size: 2rem; margin: 40px 0 15px;">Câu Chuyện Ngô Minh Hiếu (HieuPC)</h3>
+                    <p>Từ một hacker khét tiếng từng bị Mật vụ Mỹ kết án 13 năm tù vì đánh cắp dữ liệu SSN (An sinh xã hội) của hàng triệu người Mỹ, Hiếu PC đã cải tạo và trở về nước. Anh gia nhập <a href="https://khonggianmang.vn/" target="_blank" class="ext-link">Trung tâm Giám sát an toàn không gian mạng quốc gia (NCSC)</a>, dùng chính tư duy tội phạm để phòng thủ quốc gia.</p>
+                    
+                    <h3 style="font-family: var(--font-head); color: #fff; font-size: 2rem; margin: 40px 0 15px;">Dự Án Chongluadao.vn</h3>
+                    <p>Dự án phi lợi nhuận do Hiếu PC và cộng sự sáng lập. Hoạt động dưới dạng Extension trình duyệt, thu thập database từ cộng đồng. Khi người dân vô tình click vào link độc hại trên Zalo/Facebook, hệ thống sẽ hiện <strong>Màn Hình Cảnh Báo Đỏ</strong> chặn đứng quá trình truy cập, cứu hàng ngàn người khỏi nguy cơ mất tiền ngân hàng.</p>
+                    <a href="https://chongluadao.vn/" target="_blank" class="btn-cyber" style="background: var(--neon-green); margin-top: 20px;">Truy Cập ChongLuaDao ↗</a>
+                </div>
+                
+                <div class="split-visual reveal">
+                    <div class="stat-card">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <div class="stat-number">20M+</div>
+                        <p style="font-family: var(--font-code); color: var(--neon-green);">Cảnh báo tấn công Quý 1/2024</p>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fa-solid fa-shield-virus"></i>
+                        <div class="stat-number">#1</div>
+                        <p style="font-family: var(--font-code); color: var(--neon-green);">Việt Nam sở hữu nhiều chuyên gia Bug Bounty Top đầu nền tảng HackerOne toàn cầu.</p>
+                    </div>
+                    <img src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=800&q=80" alt="Cyber Security VN" style="width: 100%; height: 250px; object-fit: cover; border: 1px solid var(--neon-green); filter: sepia(100%) hue-rotate(90deg);">
+                </div>
+            </div>
+        </section>
+
+        <section class="container" id="terminal">
+            <h2 class="sec-title"><span>04.</span> Interactive Root Console</h2>
+            <p class="reveal" style="text-align: center; margin-bottom: 20px;">Trải nghiệm dòng lệnh (CLI) phân tích tình báo. Nhập <strong>'help'</strong> để xem danh sách lệnh.</p>
+            
+            <div class="terminal-container reveal">
+                <div class="term-header">
+                    <div class="circle c-red"></div><div class="circle c-yel"></div><div class="circle c-grn"></div>
+                    <span style="color: #666; font-family: var(--font-code); font-size: 0.9rem; margin-left: 10px;">root@omni-eye-server:~</span>
+                </div>
+                <div class="term-body" id="term-body" onclick="document.getElementById('cmd-input').focus()">
+                    <div class="term-output" id="term-output">OMNI-EYE OS v2.0.4 loaded.<br>Type 'help' for available commands.</div>
+                    <div class="term-input-line">
+                        <span>root@omni:~# </span>
+                        <input type="text" id="cmd-input" autocomplete="off" autofocus>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <footer>
+        <div>
+            <h4><i class="fa-solid fa-shield-halved"></i> OMNI-EYE INTEL</h4>
+            <p>Hệ thống nghiên cứu mã nguồn mở về An toàn thông tin, kiến trúc Web và Tội phạm mạng quốc tế.</p>
+        </div>
+        <div>
+            <h4>Cơ Quan Quốc Tế</h4>
+            <ul>
+                <li><a href="https://www.fbi.gov/investigate/cyber" target="_blank">> FBI Cyber Division</a></li>
+                <li><a href="https://www.interpol.int/Crimes/Cybercrime" target="_blank">> INTERPOL Cybercrime</a></li>
+                <li><a href="https://www.cisa.gov/" target="_blank">> CISA (Mỹ)</a></li>
+            </ul>
+        </div>
+        <div>
+            <h4>Công Cụ & Kiến Thức</h4>
+            <ul>
+                <li><a href="https://attack.mitre.org/" target="_blank">> MITRE ATT&CK Framework</a></li>
+                <li><a href="https://owasp.org/" target="_blank">> OWASP Top 10</a></li>
+                <li><a href="https://www.sans.org/" target="_blank">> SANS Institute Forensics</a></li>
+            </ul>
+        </div>
+        <div>
+            <h4>Cơ Quan Việt Nam</h4>
+            <ul>
+                <li><a href="https://khonggianmang.vn/" target="_blank">> NCSC - An toàn không gian mạng</a></li>
+                <li><a href="https://vncert.vn/" target="_blank">> VNCERT/CC</a></li>
+                <li><a href="https://chongluadao.vn/" target="_blank">> ChongLuaDao.vn</a></li>
+            </ul>
+        </div>
+    </footer>
+
+    <script>
+        // --- 1. MÀN HÌNH TẢI TRANG (PRELOADER) ---
+        const preloader = document.getElementById('preloader');
+        const progressFill = document.getElementById('progress-fill');
+        const loadText = document.getElementById('load-text');
+        
+        let progress = 0;
+        const loadMessages = ["Bypassing firewall...", "Loading malware database...", "Decrypting FBI files...", "Connecting to NCSC server...", "Access Granted."];
+        
+        const loadInterval = setInterval(() => {
+            progress += Math.floor(Math.random() * 20) + 5;
+            if (progress >= 100) progress = 100;
+            progressFill.style.width = progress + '%';
+            
+            if (progress < 30) loadText.innerText = loadMessages[0];
+            else if (progress < 60) loadText.innerText = loadMessages[1];
+            else if (progress < 85) loadText.innerText = loadMessages[2];
+            else if (progress < 99) loadText.innerText = loadMessages[3];
+            else {
+                loadText.innerText = loadMessages[4];
+                clearInterval(loadInterval);
+                setTimeout(() => { preloader.classList.add('fade-out'); }, 500);
+            }
+        }, 300);
+
+        // --- 2. RENDER DỮ LIỆU ĐỘNG (MALWARE DATABASE) BẰNG JS OBJECTS ---
+        const malwareData = [
+            { icon: "fa-lock", name: "WannaCry", type: "Ransomware", desc: "Tống tiền mã hóa dữ liệu. Tận dụng lỗ hổng EternalBlue (NSA) để lây nhiễm nội bộ qua giao thức SMB. Đánh sập y tế Anh năm 2017.", tags: ["Crypto", "Bitcoin", "Worm"] },
+            { icon: "fa-radiation", name: "Stuxnet", type: "Vũ khí Quốc gia", desc: "Mã độc đầu tiên gây thiệt hại vật lý (đời thực). Phá hủy máy ly tâm làm giàu Uranium của hệ thống SCADA tại Iran năm 2010.", tags: ["Zero-Day", "SCADA", "PLC"] },
+            { icon: "fa-envelope-open-text", name: "ILOVEYOU", type: "VBScript Worm", desc: "Phát tán qua email lừa đảo (Social Engineering) dưới dạng thư tình. Tự động gửi cho danh bạ Outlook và ghi đè phá hủy file. (2000)", tags: ["Phishing", "Social Eng.", "Macro"] },
+            { icon: "fa-ghost", name: "Pegasus", type: "Spyware", desc: "Phần mềm gián điệp quân sự do NSO Group (Israel) phát triển. Khai thác lỗ hổng 'Zero-click' trên iOS/Android để theo dõi thiết bị không cần tương tác.", tags: ["Zero-Click", "Mobile", "Spy"] },
+            { icon: "fa-robot", name: "Mirai", type: "Botnet", desc: "Quét các thiết bị IoT (camera, router) bảo mật yếu, biến chúng thành mạng lưới Zombie khổng lồ để phát động tấn công DDoS phá kỷ lục năm 2016.", tags: ["IoT", "DDoS", "Linux"] },
+            { icon: "fa-mask", name: "Petya / NotPetya", type: "Wiper", desc: "Giả dạng Ransomware nhưng thực chất là Wiper (xóa dữ liệu vĩnh viễn không thể khôi phục). Tấn công làm tê liệt diện rộng hệ thống tại Ukraine.", tags: ["Wiper", "Destruction", "MFT"] }
+        ];
+
+        const malwareGrid = document.getElementById('malware-grid');
+        malwareData.forEach(item => {
+            const cardHTML = `
+                <div class="flip-card reveal">
+                    <div class="flip-inner">
+                        <div class="flip-front">
+                            <i class="fa-solid ${item.icon}"></i>
+                            <h3>${item.name}</h3>
+                            <div style="margin-bottom:15px;"><span class="badge">${item.type}</span></div>
+                            <p style="color: #666; font-family: var(--font-code);"><i class="fa-solid fa-arrows-rotate"></i> Hover to decrypt details</p>
+                        </div>
+                        <div class="flip-back">
+                            <h3 style="font-family: var(--font-head); font-size: 1.5rem; margin-bottom: 10px;">> DECRYPTED LOG</h3>
+                            <p>${item.desc}</p>
+                            <p style="color: var(--neon-red); margin-bottom: 5px;">[TAGS CỐT LÕI]:</p>
+                            <ul>
+                                ${item.tags.map(tag => `<li>${tag}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+            malwareGrid.insertAdjacentHTML('beforeend', cardHTML);
+        });
+
+        // --- 3. SCROLL REVEAL ANIMATION (INTERSECTION OBSERVER) ---
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, { threshold: 0.1 });
+        
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // --- 4. HỆ THỐNG HẠT PARTICLE CANVAS (MÔ PHỎNG LUỒNG DỮ LIỆU) ---
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+
+        let particlesArray = [];
+        const mouse = { x: null, y: null, radius: 150 };
+
+        window.addEventListener('mousemove', (event) => { mouse.x = event.x; mouse.y = event.y; });
+        window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; initParticles(); });
+
+        class Particle {
+            constructor(x, y, dx, dy, size) {
+                this.x = x; this.y = y; this.dx = dx; this.dy = dy; this.size = size;
+            }
+            draw() {
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+                ctx.fillStyle = 'rgba(0, 243, 255, 0.5)'; ctx.fill();
+            }
+            update() {
+                if (this.x > canvas.width || this.x < 0) this.dx = -this.dx;
+                if (this.y > canvas.height || this.y < 0) this.dy = -this.dy;
+                this.x += this.dx; this.y += this.dy;
+                this.draw();
+            }
+        }
+
+        function initParticles() {
+            particlesArray = [];
+            let numberOfParticles = (canvas.height * canvas.width) / 15000;
+            for (let i = 0; i < numberOfParticles; i++) {
+                let size = (Math.random() * 2) + 1;
+                let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
+                let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
+                let dx = (Math.random() * 1) - 0.5;
+                let dy = (Math.random() * 1) - 0.5;
+                particlesArray.push(new Particle(x, y, dx, dy, size));
+            }
+        }
+
+        function animateParticles() {
+            requestAnimationFrame(animateParticles);
+            ctx.clearRect(0, 0, innerWidth, innerHeight);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+                // Vẽ tia laser nối hạt với chuột
+                let dx = mouse.x - particlesArray[i].x;
+                let dy = mouse.y - particlesArray[i].y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < mouse.radius) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(0, 243, 255, ${1 - distance/mouse.radius})`;
+                    ctx.lineWidth = 1;
+                    ctx.moveTo(particlesArray[i].x, particlesArray[i].y);
+                    ctx.lineTo(mouse.x, mouse.y);
+                    ctx.stroke();
+                }
+            }
+        }
+        initParticles(); animateParticles();
+
+        // --- 5. TERMINAL CONSOLE ĐỘNG (XỬ LÝ LỆNH TỪ BÀN PHÍM) ---
+        const cmdInput = document.getElementById('cmd-input');
+        const termOutput = document.getElementById('term-output');
+        const termBody = document.getElementById('term-body');
+
+        const commands = {
+            'help': 'Available commands:\n- whoami: Print user info.\n- scan: Run network vulnerability scan.\n- hieupc: Fetch dossier on Ngo Minh Hieu.\n- fbi: Display Law Enforcement operations.\n- clear: Clear terminal output.',
+            'whoami': 'User: root\nClearance: LEVEL 5 (Omni-Eye Top Secret)\nLocation: Unknown Proxy.',
+            'scan': 'Initializing Nmap 7.92...\nScanning target: Local Network\n[OK] Port 80 (HTTP) - Open\n[OK] Port 443 (HTTPS) - Open\n[WARN] Port 445 (SMB) - Vulnerable to EternalBlue!\n[ACTION REQUIRED] Patch system immediately.',
+            'hieupc': 'Fetching dossier...\nName: Ngo Minh Hieu\nAlias: HieuPC\nPast: Convicted by US Secret Service (13 years).\nPresent: Cybersecurity Expert at NCSC Vietnam. Founder of Chongluadao.vn.\nStatus: White Hat Hacker / National Defender.',
+            'fbi': 'Fetching FBI intel...\n- Operation Onymous (Silk Road Takedown)\n- AlphaBay Takedown\n- Operation Cronos (LockBit Ransomware Disruption).'
+        };
+
+        cmdInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const val = this.value.trim().toLowerCase();
+                if (val === '') return;
+                
+                termOutput.innerHTML += `\n<span style="color:var(--neon-cyan)">root@omni:~#</span> ${val}\n`;
+                
+                if (val === 'clear') {
+                    termOutput.innerHTML = '';
+                } else if (commands[val]) {
+                    termOutput.innerHTML += commands[val] + '\n';
+                } else {
+                    termOutput.innerHTML += `bash: ${val}: command not found. Type 'help'.\n`;
+                }
+                
+                this.value = '';
+                termBody.scrollTop = termBody.scrollHeight; // Tự động cuộn xuống dòng mới
+            }
+        });
+
+    </script>
+</body>
+</html>
